@@ -58,6 +58,8 @@ function handleLogIn(req) {
       user.sessionToken = token;
       delete user.password;
 
+      req.config.filesController.expandFilesInObject(req.config, user);
+
       var expiresAt = new Date();
       expiresAt.setFullYear(expiresAt.getFullYear() + 1);
 
@@ -167,14 +169,17 @@ function handleDelete(req) {
 function handleLogOut(req) {
   var success = {response: {}};
   if (req.info && req.info.sessionToken) {
-    rest.find(req.config, Auth.master(req.config), '_Session',
+    return rest.find(req.config, Auth.master(req.config), '_Session',
       {_session_token: req.info.sessionToken}
     ).then((records) => {
       if (records.results && records.results.length) {
-        rest.del(req.config, Auth.master(req.config), '_Session',
-          records.results[0].id
-        );
+        return rest.del(req.config, Auth.master(req.config), '_Session',
+          records.results[0].objectId
+        ).then(() => {
+          return Promise.resolve(success);
+        });
       }
+      return Promise.resolve(success);
     });
   }
   return Promise.resolve(success);
